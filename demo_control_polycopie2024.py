@@ -70,7 +70,7 @@ def your_compute_objective_function(domain_omega, u, spacestep):
         equation.
     """
 
-    energy = 0.0
+    energy = numpy.sum(numpy.sum(numpy.real(u) ** 2 + numpy.imag(u) ** 2)) * (spacestep**2)
 
     return energy
 
