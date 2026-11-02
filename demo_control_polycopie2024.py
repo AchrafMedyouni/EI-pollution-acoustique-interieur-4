@@ -34,11 +34,17 @@ def your_optimization_procedure(domain_omega, spacestep, omega, f, f_dir, f_neu,
     while k < numb_iter and mu > 10**(-5):
         print('---- iteration number = ', k)
         print('1. computing solution of Helmholtz problem, i.e., u')
+        u = processing.solve_helmholtz(domain_omega, spacestep, omega, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob)
         print('2. computing solution of adjoint problem, i.e., p')
+        p = processing.solve_helmholtz(domain_omega, spacestep, omega, -2*numpy.conj(u), 0*f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, Alpha*chi)
         print('3. computing objective function, i.e., energy')
+        energy[k] = compute_objective_function(domain_omega, u, spacestep)
         print('4. computing parametric gradient')
+        grad = - numpy.real(Alpha*u*p)
+        
         while ene >= energy[k] and mu > 10 ** -5:
             print('    a. computing gradient descent')
+
             print('    b. computing projected gradient')
             print('    c. computing solution of Helmholtz problem, i.e., u')
             print('    d. computing objective function, i.e., energy (E)')
@@ -56,7 +62,7 @@ def your_optimization_procedure(domain_omega, spacestep, omega, f, f_dir, f_neu,
     return chi, energy, u, grad
 
 
-def your_compute_objective_function(domain_omega, u, spacestep):
+def compute_objective_function(domain_omega, u, spacestep):
     """
     This function compute the objective function:
     J(u,domain_omega)= \int_{domain_omega}||u||^2 
@@ -69,8 +75,9 @@ def your_compute_objective_function(domain_omega, u, spacestep):
         spacestep: float, it corresponds to the step used to solve the Helmholtz
         equation.
     """
+    mask = domain_omega == _env.NODE_INTERIOR
 
-    energy = numpy.sum(numpy.sum(numpy.real(u) ** 2 + numpy.imag(u) ** 2)) * (spacestep**2)
+    energy = numpy.sum(numpy.sum(numpy.real(u[mask]) ** 2 + numpy.imag(u[mask]) ** 2)) * (spacestep**2)
 
     return energy
 
