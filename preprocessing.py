@@ -185,8 +185,8 @@ def create_fractal_coordinates(nodes, domain):
     current_node = [[a[k], b[k]] for k in range(len(nodes))]
     l = []
     for k in range(0, len(current_node) - 1):
-        n = nodes[k + 1][0] - nodes[k][0]
-        m = nodes[k + 1][1] - nodes[k][1]
+        n = (nodes[k + 1][0] - nodes[k][0])[0]
+        m = (nodes[k + 1][1] - nodes[k][1])[0]
         if n > 0:
             for o in range(0, int(n) + 1):
                 a = [[current_node[k][0] + o], [current_node[k][1]]]

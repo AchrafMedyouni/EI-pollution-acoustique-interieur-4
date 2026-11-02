@@ -32,46 +32,51 @@ def your_optimization_procedure(domain_omega, spacestep, omega, f, f_dir, f_neu,
     numb_iter = 100
     energy = numpy.zeros((numb_iter+1, 1), dtype=numpy.float64)
     def P_l(chi, l): 
-        return numpy.max(0*chi, numpy.min(numpy.ones_like(chi), chi+l))
+        return numpy.maximum(0, numpy.minimum(1, chi+l))
     while k < numb_iter and mu > 10**(-5):
         print('---- iteration number = ', k)
         print('1. computing solution of Helmholtz problem, i.e., u')
-        u = processing.solve_helmholtz(domain_omega, spacestep, omega, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob)
+        u = processing.solve_helmholtz(domain_omega, spacestep, omega, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, Alpha*chi)
         print('2. computing solution of adjoint problem, i.e., p')
         p = processing.solve_helmholtz(domain_omega, spacestep, omega, -2*numpy.conj(u), 0*f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, Alpha*chi)
         print('3. computing objective function, i.e., energy')
         energy[k] = compute_objective_function(domain_omega, u, spacestep)
         print('4. computing parametric gradient')
         grad = - numpy.real(Alpha*u*p)
+        ene = energy[k]
         while ene >= energy[k] and mu > 10 ** -5:
             print('    a. computing gradient descent')
             l = 0 
             print('    b. computing projected gradient')
-            chi = P_l(chi-mu*grad, l)
-            integral = numpy.abs(numpy.sum(chi)*spacestep**2 - V_obj*spacestep**2) ## a modifier si besoin 
+            chi_new = P_l(chi-mu*grad, l)
+            integral = numpy.abs(numpy.sum(chi_new)*spacestep**2 - V_obj*spacestep**2) ## a modifier si besoin 
             while integral > 10**(-5):
-                if numpy.sum(chi)*(spacestep)**2 > V_obj*(spacestep)**2:
-                    l = l - integral/2
+                if numpy.sum(chi_new)*(spacestep)**2 > V_obj*(spacestep)**2:
+                    l -= integral/2
                 else: 
                     l += integral/2
-                chi = P_l(chi-mu*grad, l)
+                chi_new = P_l(chi-mu*grad, l)
+                integral = numpy.abs(numpy.sum(chi_new)*spacestep**2 - V_obj*spacestep**2) ## a modifier si besoin 
+
             print('    c. computing solution of Helmholtz problem, i.e., u')
-            u = processing.solve_helmholtz(domain_omega, spacestep, omega, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, Alpha*chi)
+            u = processing.solve_helmholtz(domain_omega, spacestep, omega, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, Alpha*chi_new)
             print('    d. computing objective function, i.e., energy (E)')
             ene = compute_objective_function(domain_omega, u, spacestep)
             bool_a = ene < energy[k]
             if bool_a:
                 # The step is increased if the energy decreased
                 mu = mu * 1.1
-                chi = P_l(chi-mu*grad, l)
+                chi_new = P_l(chi-mu*grad, l)
             else:
                 # The step is decreased is the energy increased
                 mu = mu / 2
+        if ene < energy[k]:
+            chi = chi_new.copy()
         k += 1
 
     print('end. computing solution of Helmholtz problem, i.e., u')
 
-    return chi, energy, u, grad
+    return chi, energy[:k+1], u, grad
 
 
 def compute_objective_function(domain_omega, u, spacestep):
@@ -102,7 +107,7 @@ if __name__ == '__main__':
     # -- set parameters of the geometry
     N = 50  # number of points along x-axis
     M = 2 * N  # number of points along y-axis
-    level = 0 # level of the fractal
+    level = 2 # level of the fractal
     spacestep = 1.0 / N  # mesh size
 
     # -- set parameters of the partial differential equation
@@ -157,7 +162,7 @@ if __name__ == '__main__':
     V_0 = 1  # initial volume of the domain
     V_obj = numpy.sum(numpy.sum(chi)) / S  # constraint on the density
     mu = 5  # initial gradient step
-    mu1 = 10**(-5)  # parameter of the volume functional
+    mu1 = 10**(-4)#10**(-5)  # parameter of the volume functional
 
     # ----------------------------------------------------------------------
     # -- Do not modify this cell, these are the values that you will be assessed against.
@@ -174,9 +179,9 @@ if __name__ == '__main__':
     # -- compute optimization
     energy = numpy.zeros((100+1, 1), dtype=numpy.float64)
     # chi, energy, u, grad = your_optimization_procedure(...)
-    #chi, energy, u, grad = solutions.optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
-    #                    beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
-    #                    Alpha, mu, chi, V_obj, mu1, V_0)
+    chi, energy, u, grad = your_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
+                        beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
+                        Alpha, mu1, chi, V_0)
     # --- en of optimization
 
     chin = chi.copy()
