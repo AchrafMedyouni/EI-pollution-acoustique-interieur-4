@@ -31,6 +31,8 @@ def your_optimization_procedure(domain_omega, spacestep, omega, f, f_dir, f_neu,
     (M, N) = numpy.shape(domain_omega)
     numb_iter = 100
     energy = numpy.zeros((numb_iter+1, 1), dtype=numpy.float64)
+    def P_l(chi, l): 
+        return numpy.max(0*chi, numpy.min(numpy.ones_like(chi), chi+l))
     while k < numb_iter and mu > 10**(-5):
         print('---- iteration number = ', k)
         print('1. computing solution of Helmholtz problem, i.e., u')
@@ -41,17 +43,27 @@ def your_optimization_procedure(domain_omega, spacestep, omega, f, f_dir, f_neu,
         energy[k] = compute_objective_function(domain_omega, u, spacestep)
         print('4. computing parametric gradient')
         grad = - numpy.real(Alpha*u*p)
-        
         while ene >= energy[k] and mu > 10 ** -5:
             print('    a. computing gradient descent')
-
+            l = 0 
             print('    b. computing projected gradient')
+            chi = P_l(chi-mu*grad, l)
+            integral = numpy.abs(numpy.sum(chi)*spacestep**2 - V_obj*spacestep**2) ## a modifier si besoin 
+            while integral > 10**(-5):
+                if numpy.sum(chi)*(spacestep)**2 > V_obj*(spacestep)**2:
+                    l = l - integral/2
+                else: 
+                    l += integral/2
+                chi = P_l(chi-mu*grad, l)
             print('    c. computing solution of Helmholtz problem, i.e., u')
+            u = processing.solve_helmholtz(domain_omega, spacestep, omega, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, Alpha*chi)
             print('    d. computing objective function, i.e., energy (E)')
             ene = compute_objective_function(domain_omega, u, spacestep)
+            bool_a = ene < energy[k]
             if bool_a:
                 # The step is increased if the energy decreased
                 mu = mu * 1.1
+                chi = P_l(chi-mu*grad, l)
             else:
                 # The step is decreased is the energy increased
                 mu = mu / 2
@@ -77,7 +89,7 @@ def compute_objective_function(domain_omega, u, spacestep):
     """
     mask = domain_omega == _env.NODE_INTERIOR
 
-    energy = numpy.sum(numpy.sum(numpy.real(u[mask]) ** 2 + numpy.imag(u[mask]) ** 2)) * (spacestep**2)
+    energy = numpy.sum(numpy.real(u[mask]) ** 2 + numpy.imag(u[mask]) ** 2) * (spacestep**2)
 
     return energy
 
