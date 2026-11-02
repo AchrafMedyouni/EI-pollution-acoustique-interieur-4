@@ -29,10 +29,13 @@ def your_optimization_procedure(domain_omega, spacestep, omega, f, f_dir, f_neu,
 
     k = 0
     (M, N) = numpy.shape(domain_omega)
-    numb_iter = 100
+    numb_iter = 60
     energy = numpy.zeros((numb_iter+1, 1), dtype=numpy.float64)
+    S = numpy.sum(domain_omega == _env.NODE_ROBIN)
+    V_target = V_obj * S 
     def P_l(chi, l): 
-        return numpy.maximum(0, numpy.minimum(1, chi+l))
+        return numpy.where(domain_omega == _env.NODE_ROBIN, numpy.maximum(0, numpy.minimum(1, chi + l)), 0)
+
     while k < numb_iter and mu > 10**(-5):
         print('---- iteration number = ', k)
         print('1. computing solution of Helmholtz problem, i.e., u')
@@ -42,21 +45,32 @@ def your_optimization_procedure(domain_omega, spacestep, omega, f, f_dir, f_neu,
         print('3. computing objective function, i.e., energy')
         energy[k] = compute_objective_function(domain_omega, u, spacestep)
         print('4. computing parametric gradient')
-        grad = - numpy.real(Alpha*u*p)
+        #Alpha = preprocessing.set2zero(Alpha, domain_omega)
+        grad = numpy.zeros((M, N), dtype=numpy.float64)
+        for i in range(M):
+            for j in range(N):
+                if domain_omega[i, j] == _env.NODE_ROBIN:
+                    vals = [numpy.real(Alpha*u[a, b]*p[a, b])
+                            for (a, b) in ((i-1, j), (i+1, j), (i, j-1), (i, j+1))
+                            if 0 <= a < M and 0 <= b < N and domain_omega[a, b] == _env.NODE_INTERIOR]
+                    if vals:
+                        grad[i, j] = numpy.mean(vals)
         ene = energy[k]
         while ene >= energy[k] and mu > 10 ** -5:
             print('    a. computing gradient descent')
             l = 0 
             print('    b. computing projected gradient')
             chi_new = P_l(chi-mu*grad, l)
-            integral = numpy.abs(numpy.sum(chi_new)*spacestep**2 - V_obj*spacestep**2) ## a modifier si besoin 
-            while integral > 10**(-5):
-                if numpy.sum(chi_new)*(spacestep)**2 > V_obj*(spacestep)**2:
-                    l -= integral/2
+            S = numpy.sum(domain_omega == _env.NODE_ROBIN)
+            beta = V_obj*S
+            integral = numpy.abs(numpy.sum(chi_new) - beta) ## a modifier si besoin 
+            while integral > 10**(-3):
+                if numpy.sum(chi_new)*(spacestep)**2 > beta*(spacestep)**2:
+                    l -= integral/S
                 else: 
-                    l += integral/2
+                    l += integral/S
                 chi_new = P_l(chi-mu*grad, l)
-                integral = numpy.abs(numpy.sum(chi_new)*spacestep**2 - V_obj*spacestep**2) ## a modifier si besoin 
+                integral = numpy.abs(numpy.sum(chi_new) - beta) ## a modifier si besoin 
 
             print('    c. computing solution of Helmholtz problem, i.e., u')
             u = processing.solve_helmholtz(domain_omega, spacestep, omega, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, Alpha*chi_new)
@@ -66,7 +80,6 @@ def your_optimization_procedure(domain_omega, spacestep, omega, f, f_dir, f_neu,
             if bool_a:
                 # The step is increased if the energy decreased
                 mu = mu * 1.1
-                chi_new = P_l(chi-mu*grad, l)
             else:
                 # The step is decreased is the energy increased
                 mu = mu / 2
@@ -75,7 +88,7 @@ def your_optimization_procedure(domain_omega, spacestep, omega, f, f_dir, f_neu,
         k += 1
 
     print('end. computing solution of Helmholtz problem, i.e., u')
-
+    energy[-1] = compute_objective_function(domain_omega, u, spacestep)
     return chi, energy[:k+1], u, grad
 
 
@@ -107,14 +120,14 @@ if __name__ == '__main__':
     # -- set parameters of the geometry
     N = 50  # number of points along x-axis
     M = 2 * N  # number of points along y-axis
-    level = 2 # level of the fractal
+    level = 1 # level of the fractal
     spacestep = 1.0 / N  # mesh size
 
     # -- set parameters of the partial differential equation
     kx = -1.0
     ky = -1.0
     wavenumber = numpy.sqrt(kx**2 + ky**2)  # wavenumber
-    wavenumber = 10.0
+    wavenumber = 5.0
 
     # ----------------------------------------------------------------------
     # -- Do not modify this cell, these are the values that you will be assessed against.
@@ -147,7 +160,7 @@ if __name__ == '__main__':
     chi = preprocessing.set2zero(chi, domain_omega)
 
     # -- define absorbing material
-    Alpha = 10.0 - 10.0 * 1j
+    Alpha = 15.0 - 25.0 * 1j
     # -- this is the function you have written during your project
     #import compute_alpha
     #Alpha = compute_alpha.compute_alpha(...)
@@ -181,7 +194,7 @@ if __name__ == '__main__':
     # chi, energy, u, grad = your_optimization_procedure(...)
     chi, energy, u, grad = your_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
                         beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
-                        Alpha, mu1, chi, V_0)
+                        Alpha, mu, chi, V_obj)
     # --- en of optimization
 
     chin = chi.copy()
