@@ -15,7 +15,7 @@ import postprocessing
 #import solutions
 
 
-def your_optimization_procedure(domain_omega, spacestep, omega, f, f_dir, f_neu, f_rob,
+def our_optimization_procedure(domain_omega, spacestep, omega, f, f_dir, f_neu, f_rob,
                            beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
                            Alpha, mu, chi, V_obj):
     """This function return the optimized density.
@@ -111,6 +111,52 @@ def compute_objective_function(domain_omega, u, spacestep):
 
     return energy
 
+def compute_energy_response(domain_omega, spacestep, omegas, npoints, f, f_dir, f_neu, f_rob,
+                           beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob):
+    """
+    This function compute the energy response of the system for a given range of
+    frequencies.
+
+    Parameter:
+        domain_omega: Matrix (NxP), it defines the domain and the shape of the
+        Robin frontier;
+        spacestep: float, it corresponds to the step used to solve the Helmholtz
+        equation;
+        omegas: list of floats, it is the range of frequencies for which we want
+        to compute the energy response;
+        npoints: int, it is the number of points in the frequency range;
+        cf solvehelmholtz's remarks.
+    """
+    o = numpy.linspace(omegas[0], omegas[1], npoints)
+    energies = numpy.zeros((npoints,), dtype=numpy.float64)
+    for i in range(npoints):
+        omega = o[i]
+        u = processing.solve_helmholtz(domain_omega, spacestep, omega, f, f_dir,
+                                       f_neu, f_rob,
+                                       beta_pde, alpha_pde, alpha_dir,
+                                       beta_neu, beta_rob, alpha_rob)
+        energies[i] = compute_objective_function(domain_omega, u, spacestep)
+
+    return energies
+def plot_energy_response(omegas, energies):
+    """
+    This function plot the energy response of the system for a given range of
+    frequencies.
+
+    Parameter:
+        omegas: list of floats, it is the range of frequencies for which we want
+        to compute the energy response;
+        energies: list of floats, it is the energy response of the system for
+        each frequency in omegas.
+    """
+    matplotlib.pyplot.figure()
+    matplotlib.pyplot.plot(omegas, energies)
+    matplotlib.pyplot.xlabel('Frequency (Hz)')
+    matplotlib.pyplot.ylabel('Energy')
+    matplotlib.pyplot.yscale('log')
+    matplotlib.pyplot.title('Energy Response')
+    matplotlib.pyplot.grid()
+    matplotlib.pyplot.show()
 
 if __name__ == '__main__':
 
@@ -118,17 +164,19 @@ if __name__ == '__main__':
     # -- Fell free to modify the function call in this cell.
     # ----------------------------------------------------------------------
     # -- set parameters of the geometry
-    N = 50  # number of points along x-axis
-    M = 2 * N  # number of points along y-axis
-    level = 1 # level of the fractal
-    spacestep = 1.0 / N  # mesh size
+
 
     # -- set parameters of the partial differential equation
     kx = -1.0
     ky = -1.0
     wavenumber = numpy.sqrt(kx**2 + ky**2)  # wavenumber
-    wavenumber = 5.0
+    wavenumber = 50.0
 
+    N = int(7*wavenumber / (2*numpy.pi)) # number of points along x-axis
+    M = 2 * N  # number of points along y-axis
+    level = 1 # level of the fractal
+    spacestep = 1.0 / N  # mesh size
+    # 1/N = 2pi/5k
     # ----------------------------------------------------------------------
     # -- Do not modify this cell, these are the values that you will be assessed against.
     # ----------------------------------------------------------------------
@@ -185,26 +233,30 @@ if __name__ == '__main__':
                         beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob)
     chi0 = chi.copy()
     u0 = u.copy()
-
+    
     # ----------------------------------------------------------------------
     # -- Fell free to modify the function call in this cell.
     # ----------------------------------------------------------------------
     # -- compute optimization
-    energy = numpy.zeros((100+1, 1), dtype=numpy.float64)
-    # chi, energy, u, grad = your_optimization_procedure(...)
-    chi, energy, u, grad = your_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
-                        beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
-                        Alpha, mu, chi, V_obj)
+    # energy = numpy.zeros((100+1, 1), dtype=numpy.float64)
+    # chi, energy, u, grad = our_optimization_procedure(...)
+    # chi, energy, u, grad = our_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
+    #                     beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
+    #                     Alpha, mu, chi, V_obj)
     # --- en of optimization
+    npoints = 50
+    energy = compute_energy_response(domain_omega, spacestep, (4.6, 40), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob)
+    omegas = numpy.linspace(250, 2000, npoints)
+    plot_energy_response(omegas, energy)
 
     chin = chi.copy()
     un = u.copy()
 
     # -- plot chi, u, and energy
-    postprocessing._plot_uncontroled_solution(u0, chi0)
-    postprocessing._plot_controled_solution(un, chin)
-    err = un - u0
-    postprocessing._plot_error(err)
-    postprocessing._plot_energy_history(energy)
+    # postprocessing._plot_uncontroled_solution(u0, chi0)
+    # postprocessing._plot_controled_solution(un, chin)
+    # err = un - u0
+    # postprocessing._plot_error(err)
+    # postprocessing._plot_energy_history(energy)
 
     print('End.')
