@@ -332,7 +332,7 @@ if __name__ == '__main__':
 
     N = int(7*wavenumber / (2*numpy.pi)) # number of points along x-axis
     M = 2 * N  # number of points along y-axis
-    level = 3 # level of the fractal
+    level = 1 # level of the fractal
     spacestep = 1.0 / N  # mesh size
     # 1/N = 2pi/5k
     # ----------------------------------------------------------------------
