@@ -240,15 +240,22 @@ if __name__ == '__main__':
     # -- compute optimization
     # energy = numpy.zeros((100+1, 1), dtype=numpy.float64)
     # chi, energy, u, grad = our_optimization_procedure(...)
-    # chi, energy, u, grad = our_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
-    #                     beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
-    #                     Alpha, mu, chi, V_obj)
+    chi, energy, u, grad = our_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
+                        beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
+                        Alpha, mu, chi, V_obj)
     # --- en of optimization
-    npoints = 50
-    energy = compute_energy_response(domain_omega, spacestep, (4.6, 40), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob)
+    npoints = 1000
+    # il faut garder en tête que Alpha change avec la fréquemce
+    energy = compute_energy_response(domain_omega, spacestep, (4.6, 40), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, Alpha*chi)
     omegas = numpy.linspace(250, 2000, npoints)
     plot_energy_response(omegas, energy)
+    print('chi optimisée: ', len(energy[energy > 100]))
 
+    #sans chi
+    energy = compute_energy_response(domain_omega, spacestep, (4.6, 40), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, 0*chi)
+    omegas = numpy.linspace(250, 2000, npoints)
+    plot_energy_response(omegas, energy)
+    print('Sans chi:', len(energy[energy > 100]))
     chin = chi.copy()
     un = u.copy()
 
