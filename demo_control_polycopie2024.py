@@ -5,13 +5,14 @@
 import matplotlib.pyplot
 import numpy
 import os
-
+import scipy
 
 # MRG packages
 import _env
 import preprocessing
 import processing
 import postprocessing
+import compute_alpha
 #import solutions
 
 
@@ -111,8 +112,8 @@ def compute_objective_function(domain_omega, u, spacestep):
 
     return energy
 
-def compute_energy_response(domain_omega, spacestep, omegas, npoints, f, f_dir, f_neu, f_rob,
-                           beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob):
+def compute_energy_response(domain_omega, spacestep, freqs, npoints, f, f_dir, f_neu, f_rob,
+                           beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi, alphas):
     """
     This function compute the energy response of the system for a given range of
     frequencies.
@@ -127,17 +128,40 @@ def compute_energy_response(domain_omega, spacestep, omegas, npoints, f, f_dir, 
         npoints: int, it is the number of points in the frequency range;
         cf solvehelmholtz's remarks.
     """
-    o = numpy.linspace(omegas[0], omegas[1], npoints)
+    wavenumbers = (2.0 * numpy.pi * freqs[0]/340, 2.0 * numpy.pi * freqs[1]/340)
+    #alphas = compute_alpha.run_compute_alpha(material, 'Birch LT', npoints, freqs=freqs)
+    k = numpy.linspace(wavenumbers[0], wavenumbers[1], npoints)
     energies = numpy.zeros((npoints,), dtype=numpy.float64)
     for i in range(npoints):
-        omega = o[i]
-        u = processing.solve_helmholtz(domain_omega, spacestep, omega, f, f_dir,
+        nbr = k[i]
+        print('Computing energy response for frequency = ', k[i]*340/(2.0*numpy.pi), 'Hz')
+        alpha = alphas[i]
+        u = processing.solve_helmholtz(domain_omega, spacestep, nbr, f, f_dir,
                                        f_neu, f_rob,
                                        beta_pde, alpha_pde, alpha_dir,
-                                       beta_neu, beta_rob, alpha_rob)
+                                       beta_neu, beta_rob, alpha*chi)
         energies[i] = compute_objective_function(domain_omega, u, spacestep)
 
     return energies
+
+def recherche_max(energie, omegas, nmax):
+    """
+    This function compute the maximum of the energy response of the system for a given range of
+    frequencies.
+
+    Parameter:
+        energie: list of floats, it is the energy response of the system for
+        each frequency in omegas;
+        omegas: list of floats, it is the range of frequencies for which we want
+        to compute the energy response;
+        nmax: int, it is the number of maximums to be found.
+    """
+    max_indices = numpy.argsort(energie)[-nmax:][::-1]
+    max_frequencies = omegas[max_indices]
+    max_energies = energie[max_indices]
+
+    return max_frequencies, max_energies
+    
 def plot_energy_response(omegas, energies):
     """
     This function plot the energy response of the system for a given range of
@@ -174,7 +198,7 @@ if __name__ == '__main__':
 
     N = int(7*wavenumber / (2*numpy.pi)) # number of points along x-axis
     M = 2 * N  # number of points along y-axis
-    level = 1 # level of the fractal
+    level = 3 # level of the fractal
     spacestep = 1.0 / N  # mesh size
     # 1/N = 2pi/5k
     # ----------------------------------------------------------------------
@@ -240,24 +264,52 @@ if __name__ == '__main__':
     # -- compute optimization
     # energy = numpy.zeros((100+1, 1), dtype=numpy.float64)
     # chi, energy, u, grad = our_optimization_procedure(...)
-    chi, energy, u, grad = our_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
-                        beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
-                        Alpha, mu, chi, V_obj)
+    # chi, energy, u, grad = our_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
+    #                     beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
+    #                     Alpha, mu, chi, V_obj)
     # --- en of optimization
     npoints = 1000
+    phi = 0.529  # porosity
+    sigma = 151429.0  # resitivity
+    alpha_h = 1.37  # tortuosity
+    material = {'phi': phi, 'sigma': sigma, 'alpha_h': alpha_h}
+    material_name = 'Birch LT'
+    try :
+        input_filename = './data/dta_alpha_' + str(material_name) + '.mtx'
+        alphas = scipy.io.mmread(input_filename)
+    except: 
+        alphas = compute_alpha.run_compute_alpha(material, 'Birch LT', npoints)
     # il faut garder en tête que Alpha change avec la fréquemce
-    energy = compute_energy_response(domain_omega, spacestep, (4.6, 40), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, Alpha*chi)
-    omegas = numpy.linspace(250, 2000, npoints)
-    plot_energy_response(omegas, energy)
-    print('chi optimisée: ', len(energy[energy > 100]))
-
+    # energy_optimised = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob,chi, alphas)
+    freqs = numpy.linspace(250, 2000, npoints)
     #sans chi
-    energy = compute_energy_response(domain_omega, spacestep, (4.6, 40), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, 0*chi)
-    omegas = numpy.linspace(250, 2000, npoints)
-    plot_energy_response(omegas, energy)
-    print('Sans chi:', len(energy[energy > 100]))
+    # energy = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, 0*chi, alphas)
+
+    # energy_chi = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob,chi0, alphas)
+
+    # max_omegas, max_energies = recherche_max(energy_chi, freqs, 5)
+
+    max_omegas = [428.67867868, 765.01501502, 868.36836837, 824.57457457, 1914.16416416] # a enlever
+
+    print("Max frequencies:", max_omegas)
+
+    # Plotting the energy response
+    # matplotlib.pyplot.figure()
+    # matplotlib.pyplot.plot(omegas, energy, label="sans Matériaux absorbant", color='blue')
+    # # matplotlib.pyplot.plot(omegas, energy_optimised, label="avec Matériaux absorbant", color='red')
+    # # matplotlib.pyplot.plot(omegas, energy_chi, label="avec Matériaux absorbant initial", color='green')
+    # matplotlib.pyplot.legend()
+    # matplotlib.pyplot.xlabel('Frequency (Hz)')
+    # matplotlib.pyplot.ylabel('Energy')
+    # matplotlib.pyplot.yscale('log')
+    # matplotlib.pyplot.title('Energy Response')
+    # matplotlib.pyplot.grid()
+    # matplotlib.pyplot.show()
+
+
     chin = chi.copy()
     un = u.copy()
+
 
     # -- plot chi, u, and energy
     # postprocessing._plot_uncontroled_solution(u0, chi0)

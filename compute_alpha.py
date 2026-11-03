@@ -177,11 +177,11 @@ def compute_alpha(omega, material, material_name):
     return temp_alpha, temp_error
 
 
-def run_compute_alpha(material, material_name):
+def run_compute_alpha(material, material_name, npoints, freqs=(250, 2000)):
     print('Computing alpha...')
-    numb_omega = 100  # 1000
+    numb_omega = npoints  # 1000
     # omegas = numpy.logspace(numpy.log10(600), numpy.log10(30000), num=numb_omega)
-    omegas = numpy.linspace(2.0 * numpy.pi, numpy.pi * 10000, num=numb_omega)
+    omegas = numpy.linspace(2.0 * numpy.pi*freqs[0], 2.0* numpy.pi * freqs[1], num=numb_omega)
     temp = [compute_alpha(omega, material, material_name) for omega in omegas]
     print("temp:", "------", temp)
     alphas, errors = map(list, zip(*temp))
@@ -189,14 +189,13 @@ def run_compute_alpha(material, material_name):
     errors = numpy.array(errors)
 
     print('Writing alpha...')
-    output_filename = 'dta_omega_' + str(material_name) + '.mtx'
+    output_filename = './data/dta_omega_' + str(material_name) + '.mtx'
     scipy.io.mmwrite(output_filename, omegas.reshape(alphas.shape[0], 1), field='complex', symmetry='general')
-    output_filename = 'dta_alpha_' + str(material_name) + '.mtx'
+    output_filename = './data/dta_alpha_' + str(material_name) + '.mtx'
     scipy.io.mmwrite(output_filename, alphas.reshape(alphas.shape[0], 1), field='complex', symmetry='general')
-    output_filename = 'dta_error_' + str(material_name) + '.mtx'
-    scipy.io.mmwrite(output_filename, errors.reshape(errors.shape[0], 1), field='complex', symmetry='general')
 
-    return
+
+    return alphas
 
 
 def run_plot_alpha(material):
