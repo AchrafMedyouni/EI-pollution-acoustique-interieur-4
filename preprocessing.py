@@ -21,7 +21,6 @@ def set2zero(alpha, domain_omega):
         domain_omega: Matrix (MxN), it defines the domain and the shape of the
         Robin frontier.
     """
-
     (M, N) = numpy.shape(domain_omega)
     for i in range(0, M):
         for j in range(0, N):
@@ -79,7 +78,7 @@ def _set_geometry_of_domain(M, N, level=0):
         domain_omega[N, 0:N] = _env.NODE_ROBIN  # south
     else:
         domain_omega[M-1, 0:N] = _env.NODE_NEUMANN  # south
-
+        
     # -- define fractal
     nodes = create_fractal_nodes([numpy.array([[0], [N]]), numpy.array([[N], [N]])], level)
     x, y = create_fractal_coordinates(nodes, domain_omega)

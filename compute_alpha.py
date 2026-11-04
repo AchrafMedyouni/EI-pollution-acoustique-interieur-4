@@ -178,12 +178,12 @@ def compute_alpha(omega, material, material_name):
 
 
 def run_compute_alpha(material, material_name, npoints, freqs=(250, 2000)):
-    print('Computing alpha...')
+    print(f'Computing alpha for {material_name}...')
+
     numb_omega = npoints  # 1000
     # omegas = numpy.logspace(numpy.log10(600), numpy.log10(30000), num=numb_omega)
     omegas = numpy.linspace(2.0 * numpy.pi*freqs[0], 2.0* numpy.pi * freqs[1], num=numb_omega)
     temp = [compute_alpha(omega, material, material_name) for omega in omegas]
-    print("temp:", "------", temp)
     alphas, errors = map(list, zip(*temp))
     alphas = numpy.array(alphas)
     errors = numpy.array(errors)
@@ -196,6 +196,10 @@ def run_compute_alpha(material, material_name, npoints, freqs=(250, 2000)):
 
 
     return alphas
+
+def compute_single_alpha(material, material_name, freq): 
+    omega = 2.0*numpy.pi*freq 
+    return compute_alpha(omega, material, material_name)[0]
 
 
 def run_plot_alpha(material):
@@ -263,8 +267,8 @@ def run():
     alpha_h = 1.22  # tortuosity
     material = {'phi': phi, 'sigma': sigma, 'alpha_h': alpha_h}
     material_name = 'Pine_TR'
-    run_compute_alpha(material, material_name)
-    run_plot_alpha(material_name)
+    run_compute_alpha(material, material_name, 1000)
+    #run_plot_alpha(material_name)
     return
 
 

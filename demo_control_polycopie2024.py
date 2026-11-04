@@ -106,7 +106,8 @@ def our_optimization_procedure(domain_omega, spacestep, omega, f, f_dir, f_neu, 
         k += 1
 
     print('end. computing solution of Helmholtz problem, i.e., u')
-    energy[-1] = compute_objective_function(domain_omega, u, spacestep)
+    u = processing.solve_helmholtz(domain_omega, spacestep, omega, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, Alpha*chi)
+    energy[k] = compute_objective_function(domain_omega, u, spacestep)
     return chi, energy[:k+1], u, grad
 
 
@@ -161,7 +162,7 @@ def compute_energy_response(domain_omega, spacestep, freqs, npoints, f, f_dir, f
 
     return energies
 
-def recherche_max(energie, omegas, nmax):
+def recherche_max(energie, frequencies, nmax):
     """
     This function compute the maximum of the energy response of the system for a given range of
     frequencies.
@@ -173,8 +174,9 @@ def recherche_max(energie, omegas, nmax):
         to compute the energy response;
         nmax: int, it is the number of maximums to be found.
     """
-    max_indices = numpy.argsort(energie)[-nmax:][::-1]
-    max_frequencies = omegas[max_indices]
+    pics = [i for i in range(1, len(energie) - 1) if energie[i] > energie[i-1] and energie[i] > energie[i+1]]
+    max_indices = numpy.array(sorted(pics, key=lambda i: -energie[i])[:nmax])
+    max_frequencies = frequencies[max_indices]
     max_energies = energie[max_indices]
 
     return max_frequencies, max_energies
@@ -328,9 +330,9 @@ if __name__ == '__main__':
     kx = -1.0
     ky = -1.0
     wavenumber = numpy.sqrt(kx**2 + ky**2)  # wavenumber
-    wavenumber = 50.0
+    wavenumber = 2*numpy.pi*2000/340.0
 
-    N = int(7*wavenumber / (2*numpy.pi)) # number of points along x-axis
+    N = int(10*wavenumber / (2*numpy.pi)) # number of points along x-axis
     M = 2 * N  # number of points along y-axis
     level = 1 # level of the fractal
     spacestep = 1.0 / N  # mesh size
@@ -366,10 +368,16 @@ if __name__ == '__main__':
     chi = preprocessing.set2zero(chi, domain_omega)
 
     # -- define absorbing material
-    Alpha = 15.0 - 25.0 * 1j
+    #Alpha = 15.0 - 25.0 * 1j
+
     # -- this is the function you have written during your project
     #import compute_alpha
-    #Alpha = compute_alpha.compute_alpha(...)
+    phi = 0.529  # porosity
+    sigma = 151429.0  # resitivity
+    alpha_h = 1.37  # tortuosity
+    material = {'phi': phi, 'sigma': sigma, 'alpha_h': alpha_h}
+    material_name = 'Birch LT'
+    Alpha = compute_alpha.compute_single_alpha(material, material_name, wavenumber*340/(2*numpy.pi))
     alpha_rob = Alpha * chi
 
     # -- set parameters for optimization
@@ -402,12 +410,8 @@ if __name__ == '__main__':
     #                     beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
     #                     Alpha, mu, chi, V_obj)
     # --- en of optimization
+
     npoints = 1000
-    phi = 0.529  # porosity
-    sigma = 151429.0  # resitivity
-    alpha_h = 1.37  # tortuosity
-    material = {'phi': phi, 'sigma': sigma, 'alpha_h': alpha_h}
-    material_name = 'Birch LT'
     try :
         input_filename = './data/dta_alpha_' + str(material_name) + '.mtx'
         alphas = scipy.io.mmread(input_filename)
@@ -419,28 +423,13 @@ if __name__ == '__main__':
     freqs = numpy.round(freqs, 8)
     #sans chi
     # energy = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, 0*chi, alphas)
-    # energy_chi = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob,chi0, alphas)
-
-    # max_omegas, max_energies = recherche_max(energy_chi, freqs, 5)
-    max_freqs = [428.67867868, 765.01501502, 868.36836837, 824.57457457, 1914.16416416]
+    energy_chi = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob,0*chi0, alphas)
+    # changement du signe des alphas pour avoir la même convention que le cours 
+    #alphas = -alphas 
+    max_freqs, max_energies = recherche_max(energy_chi, freqs, 5)
     indexes = [freqs.tolist().index(max_freqs[i]) for i in range(len(max_freqs))]
     alphas_max = [alphas[i] for i in indexes]
-    # chi_optimized = []
-    # # optimisation pour plusieurs fréquences 
-    # for i in range(len(max_freqs)):
-    #     chi, energy, u, grad = our_optimization_procedure(domain_omega, spacestep, 2*numpy.pi*freqs[i]/340.0, f, f_dir, f_neu, f_rob,
-    #                 beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
-    #                 alphas_max[i], mu, chi, V_obj)
-    #     chi_optimized.append(chi)
-    # energies = []
-    # # calcul de l'énergie pour chaque fréquence optimisée
-    # for i in range(len(max_freqs)):
-    #     energies.append([])
-    #     for j in range(len(max_freqs)):
-    #         energies[i].append(compute_objective_function(domain_omega, processing.solve_helmholtz(domain_omega, spacestep, 2*numpy.pi*freqs[j]/340.0, f, f_dir, f_neu, f_rob,
-    #             beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alphas_max[i]*chi_optimized[i]), spacestep))
-    # for i in range(len(max_freqs)):
-    #     print('Energy response for frequency = ', max_freqs[i], 'Hz: ', energies[i])
+
 
     chi, energy, u, grad = our_optimization_procedure_multiple(domain_omega, spacestep, [2*numpy.pi*freq/340.0 for freq in max_freqs], f, f_dir, f_neu, f_rob,
                         beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
@@ -450,14 +439,14 @@ if __name__ == '__main__':
 
     energy_chi = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi0, alphas)
 
-    chi_rand, energy, u, grad = our_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
+    chi_rand, _energy, u, grad = our_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
                         beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
-                        Alpha, mu, chi, V_obj)
+                        Alpha, mu, chi0.copy(), V_obj)
     energy = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi_rand, alphas)
 
     #Plotting the energy response
     matplotlib.pyplot.figure()
-    matplotlib.pyplot.plot(freqs, energy, label="optimisation random", color='blue')
+    matplotlib.pyplot.plot(freqs, energy, label="optimisation sur la fréquence 2000Hz", color='blue')
     matplotlib.pyplot.plot(freqs, energy_optimised, label="optimisation plusieurs fréquences", color='red')
     matplotlib.pyplot.plot(freqs, energy_chi, label="pas d'optimisation", color='green')
     matplotlib.pyplot.legend()
