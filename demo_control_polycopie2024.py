@@ -334,7 +334,7 @@ if __name__ == '__main__':
 
     N = int(10*wavenumber / (2*numpy.pi)) # number of points along x-axis
     M = 2 * N  # number of points along y-axis
-    level = 0 # level of the fractal
+    level = 2 # level of the fractal
     spacestep = 1.0 / N  # mesh size
     # 1/N = 2pi/5k
     # ----------------------------------------------------------------------
@@ -423,42 +423,43 @@ if __name__ == '__main__':
     freqs = numpy.round(freqs, 8)
     #sans chi
     # energy = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, 0*chi, alphas)
-    energy_chi = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob,0*chi0, alphas)
+    #energy_chi = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob,0*chi0, alphas)
     # changement du signe des alphas pour avoir la même convention que le cours 
     #alphas = -alphas 
-    max_freqs, max_energies = recherche_max(energy_chi, freqs, 5)
-    indexes = [freqs.tolist().index(max_freqs[i]) for i in range(len(max_freqs))]
-    alphas_max = [alphas[i] for i in indexes]
+    #max_freqs, max_energies = recherche_max(energy_chi, freqs, 5)
+    #indexes = [freqs.tolist().index(max_freqs[i]) for i in range(len(max_freqs))]
+    #alphas_max = [alphas[i] for i in indexes]
 
 
-    chi, energy, u, grad = our_optimization_procedure_multiple(domain_omega, spacestep, [2*numpy.pi*freq/340.0 for freq in max_freqs], f, f_dir, f_neu, f_rob,
-                        beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
-                        alphas_max, mu, chi, V_obj, numb_iter=60, normaliser=True)
+    # chi, energy, u, grad = our_optimization_procedure_multiple(domain_omega, spacestep, [2*numpy.pi*freq/340.0 for freq in max_freqs], f, f_dir, f_neu, f_rob,
+    #                     beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
+    #                     alphas_max, mu, chi, V_obj, numb_iter=60, normaliser=True)
     
-    energy_optimised = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi, alphas)
+    # energy_optimised = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi, alphas)
 
-    energy_chi = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi0, alphas)
+    # energy_chi = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi0, alphas)
 
     chi_rand, _energy, u, grad = our_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
                         beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
                         Alpha, mu, chi0.copy(), V_obj)
-    energy = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi_rand, alphas)
+    
+    # energy = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi_rand, alphas)
 
-    #Plotting the energy response
-    matplotlib.pyplot.figure()
-    matplotlib.pyplot.plot(freqs, energy, label="optimisation sur la fréquence 2000Hz", color='blue')
-    matplotlib.pyplot.plot(freqs, energy_optimised, label="optimisation plusieurs fréquences", color='red')
-    matplotlib.pyplot.plot(freqs, energy_chi, label="pas d'optimisation", color='green')
-    matplotlib.pyplot.legend()
-    matplotlib.pyplot.xlabel('Frequency (Hz)')
-    matplotlib.pyplot.ylabel('Energy')
-    matplotlib.pyplot.yscale('log')
-    matplotlib.pyplot.title('Energy Response')
-    matplotlib.pyplot.grid()
-    matplotlib.pyplot.show()
+    # #Plotting the energy response
+    # matplotlib.pyplot.figure()
+    # matplotlib.pyplot.plot(freqs, energy, label="optimisation sur la fréquence 2000Hz", color='blue')
+    # matplotlib.pyplot.plot(freqs, energy_optimised, label="optimisation plusieurs fréquences", color='red')
+    # matplotlib.pyplot.plot(freqs, energy_chi, label="pas d'optimisation", color='green')
+    # matplotlib.pyplot.legend()
+    # matplotlib.pyplot.xlabel('Frequency (Hz)')
+    # matplotlib.pyplot.ylabel('Energy')
+    # matplotlib.pyplot.yscale('log')
+    # matplotlib.pyplot.title('Energy Response')
+    # matplotlib.pyplot.grid()
+    # matplotlib.pyplot.show()
 
 
-    chin = chi.copy()
+    chin = chi_rand.copy()
     un = u.copy()
 
 
@@ -467,6 +468,6 @@ if __name__ == '__main__':
     postprocessing._plot_controled_solution(un, chin)
     err = un - u0
     postprocessing._plot_error(err)
-    postprocessing._plot_energy_history(energy)
+    postprocessing._plot_energy_history(_energy)
 
     print('End.')
