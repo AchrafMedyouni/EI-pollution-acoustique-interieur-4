@@ -379,7 +379,7 @@ if __name__ == '__main__':
     material_name = 'Birch LT'
     Alpha = compute_alpha.compute_single_alpha(material, material_name, wavenumber*340/(2*numpy.pi))
     alpha_rob = Alpha * chi
-
+    #----------------------------------------------------
     # -- set parameters for optimization
     S = 0  # surface of the fractal
     for i in range(0, M):
