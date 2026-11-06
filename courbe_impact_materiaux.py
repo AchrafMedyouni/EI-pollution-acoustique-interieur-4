@@ -26,7 +26,7 @@ from demo_control_polycopie2024 import our_optimization_procedure_multiple, comp
 
 # parametres
 N = 50                     # points de la grille (domaine de 1 m x 1 m)
-level = 2                  # 0 = mur plat, 1 ou 2 = mur préfractal
+level = 0                  # 0 = mur plat, 1 ou 2 = mur préfractal
 c0 = 340.0                 # vitesse du son (m/s), la même que dans compute_alpha.py
 epaisseur = 0.01           # épaisseur du matériau (m), la même que L dans compute_alpha.py
 
@@ -42,7 +42,11 @@ MATERIALS = {
     'Pin': {'phi': 0.671, 'sigma': 35540.0, 'alpha_h': 1.22, 'f_emission': 24.0},  # EPD EGGER, résineux séché
 }
 reference = 'Mélamine'     # le mur plein de ce matériau sert de référence (gain = 0 dB)
-
+PRIX = {
+    'Mélamine': 8.5,
+    'Polyuréthane': 2.9,
+    'Pin': 6.9
+}
 
 # =====================================================================
 # MISE EN PLACE (comme dans le code fourni)
@@ -96,6 +100,11 @@ def impact_carbone(nom, beta):
     volume = beta * facteur_surface * epaisseur        # m3 de matériau
     return volume * MATERIALS[nom]['f_emission']
 
+def cout(nom, beta):
+    """Prix (€) de matériau pour 1 m de mur : surface couverte (m2) x prix au m2"""
+    surface = beta * facteur_surface            # m2 de poreux pour 1 m de mur
+    return surface * PRIX[nom]
+
 
 # =====================================================================
 # ÉTAPE 1 : fréquences de résonance du mur nu (les mêmes pour tous les matériaux)
@@ -141,7 +150,6 @@ for nom in MATERIALS:
     gains.append(10 * numpy.log10(J_ref / energie_moyenne(domain_omega, chi_plein, alphas_plage[nom])))
     resultats[nom] = gains
 
-
 # =====================================================================
 # ÉTAPE 4 : tableau et courbes
 # =====================================================================
@@ -171,3 +179,5 @@ def tracer(abscisses, xlabel, fichier):
 tracer(lambda nom: betas_tracees, 'β : part du mur couverte de poreux', f'perf_beta_materiaux_level{level}.png')
 tracer(lambda nom: [impact_carbone(nom, b) for b in betas_tracees],
        'Impact carbone : kg CO$_2$ eq par m de mur', f'perf_carbone_materiaux_level{level}.png')
+tracer(lambda nom: [cout(nom, b) for b in betas_tracees],
+       'Coût : € par m de mur', f'perf_prix_materiaux_level{level}.png')
