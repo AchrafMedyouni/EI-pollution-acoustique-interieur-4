@@ -336,14 +336,33 @@ if __name__ == '__main__':
         alphas = scipy.io.mmread(input_filename)
     except: 
         alphas = compute_alpha.run_compute_alpha(material, 'Birch LT', npoints)
+     # il faut garder en tête que Alpha change avec la fréquemce
+    # energy_optimised = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob,chi, alphas)
     freqs = numpy.linspace(250, 2000, npoints)
     freqs = numpy.round(freqs, 8)
 
-    chi_rand, _energy, u, grad = our_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
+    # energy = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, 0*chi, alphas)
+    #energy_chi = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob,0*chi0, alphas)
+    # changement du signe des alphas pour avoir la même convention que le cours 
+    #alphas = -alphas 
+    #max_freqs, max_energies = recherche_max(energy_chi, freqs, 5)
+    #indexes = [freqs.tolist().index(max_freqs[i]) for i in range(len(max_freqs))]
+    #alphas_max = [alphas[i] for i in indexes]
+
+
+    # chi, energy, u, grad = our_optimization_procedure_multiple(domain_omega, spacestep, [2*numpy.pi*freq/340.0 for freq in max_freqs], f, f_dir, f_neu, f_rob,
+    #                     beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
+    #                     alphas_max, mu, chi, V_obj, numb_iter=60, normaliser=True)
+    
+    # energy_optimised = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi, alphas)
+
+    # energy_chi = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi0, alphas)
+
+    chi_one, _energy, u, grad = our_optimization_procedure(domain_omega, spacestep, wavenumber, f, f_dir, f_neu, f_rob,
                         beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, alpha_rob,
                         Alpha, mu, chi0.copy(), V_obj)
     
-    # energy = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi_rand, alphas)
+    energy = compute_energy_response(domain_omega, spacestep, (250, 2000), npoints, f, f_dir, f_neu, f_rob, beta_pde, alpha_pde, alpha_dir, beta_neu, beta_rob, chi_one, alphas)
 
     # #Plotting the energy response
     # matplotlib.pyplot.figure()
@@ -359,7 +378,7 @@ if __name__ == '__main__':
     # matplotlib.pyplot.show()
 
 
-    chin = chi_rand.copy()
+    chin = chi_one.copy()
     un = u.copy()
 
 
